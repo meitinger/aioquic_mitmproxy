@@ -13,7 +13,6 @@ readme_file = os.path.join(root_dir, "README.rst")
 with open(readme_file, encoding="utf-8") as f:
     long_description = f.read()
 
-
 setuptools.setup(
     name=about["__title__"],
     version=about["__version__"],
