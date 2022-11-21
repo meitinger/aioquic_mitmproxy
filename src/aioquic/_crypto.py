@@ -330,9 +330,8 @@ class HeaderProtection:
         # and calculate the truncated packet number
         pn_truncated = 0
         for i in range(pn_length):
-            self._buffer[pn_offset + i] = (
-                value := self._buffer[pn_offset + i] ^ self._mask[1 + i]
-            )
+            value = self._buffer[pn_offset + i] ^ self._mask[1 + i]
+            self._buffer[pn_offset + i] = value
             pn_truncated = value | (pn_truncated << 8)
         return pn_truncated
 
