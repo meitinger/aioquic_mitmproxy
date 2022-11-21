@@ -207,6 +207,8 @@ class AEAD:
         )
 
         # append the AEAD tag to the cipher text
+        if self._outlen[0] + AEAD_TAG_LENGTH > PACKET_LENGTH_MAX:
+            raise CryptoError("Invalid payload length")
         self._assert(
             self._binding.lib.EVP_CIPHER_CTX_ctrl(
                 self._encrypt_ctx,  # EVP_CIPHER_CTX *ctx
@@ -270,11 +272,12 @@ class HeaderProtection:
             self._binding.lib.ERR_clear_error()
             raise CryptoError("OpenSSL call failed")
 
-    def _update_mask(self, pn_offset: int) -> None:
+    def _update_mask(self, pn_offset: int, buffer_len: int) -> None:
         # reference: https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.2
 
         # sample data starts 4 bytes after the beginning of the Packet Number field (regardless of its length)
         sample_offset = pn_offset + 4
+        assert pn_offset + SAMPLE_LENGTH <= buffer_len
 
         if self._is_chacha20:
             # reference: https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.4
@@ -347,30 +350,29 @@ class HeaderProtection:
         self._binding.ffi.buffer(
             self._buffer + len(plain_header), len(protected_payload)
         )[:] = protected_payload
-        length = len(plain_header) + len(protected_payload)
+        buffer_len = len(plain_header) + len(protected_payload)
 
         # build the mask and use it
-        self._update_mask(pn_offset=pn_offset)
+        self._update_mask(pn_offset, buffer_len)
         self._mask_header()
-        self._mask_packet_number(pn_offset=pn_offset, pn_length=pn_length)
+        self._mask_packet_number(pn_offset, pn_length)
 
-        return bytes(self._binding.ffi.buffer(self._buffer, length))
+        return bytes(self._binding.ffi.buffer(self._buffer, buffer_len))
 
     def remove(self, packet: bytes, encrypted_offset: int) -> Tuple[bytes, int]:
         # Reference: https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.1
 
         # copy the packet into the buffer
-        self._binding.ffi.buffer(self._buffer, len(packet))[:] = packet
+        packet_len = len(packet)
+        self._binding.ffi.buffer(self._buffer, packet_len)[:] = packet
 
         # build the mask and use it to unmask the header first
-        self._update_mask(pn_offset=encrypted_offset)
+        self._update_mask(encrypted_offset, packet_len)
         self._mask_header()
 
         # get the packet number length and unmask it as well
         pn_length = (self._buffer[0] & 0x03) + 1
-        pn_truncated = self._mask_packet_number(
-            pn_offset=encrypted_offset, pn_length=pn_length
-        )
+        pn_truncated = self._mask_packet_number(encrypted_offset, pn_length)
 
         # return the header and the truncated packet number
         return (
