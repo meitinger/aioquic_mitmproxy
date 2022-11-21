@@ -12,7 +12,7 @@ class BufferWriteError(ValueError):
 class Buffer:
     def __init__(self, capacity: Optional[int] = 0, data: Optional[bytes] = None):
         self._pos = 0
-        self._data = bytearray(capacity if data is None else data)
+        self._data = memoryview(bytearray(capacity if data is None else data))
         self._capacity = len(self._data)
 
     def _check_read_bounds(self, len: int) -> None:
@@ -29,7 +29,7 @@ class Buffer:
 
     @property
     def data(self) -> bytes:
-        return self._data[0 : self._pos]
+        return bytes(self._data[0 : self._pos])
 
     def data_slice(self, start: int, end: int) -> bytes:
         if (
@@ -40,7 +40,7 @@ class Buffer:
             or end < start
         ):
             raise BufferReadError("Read out of bounds")
-        return self.data[start:end]
+        return bytes(self._data[start:end])
 
     def eof(self) -> bool:
         return self._pos == self._capacity
@@ -55,7 +55,7 @@ class Buffer:
 
     def pull_bytes(self, length: int) -> bytes:
         self._check_read_bounds(length)
-        result = self._data[self._pos : (self._pos + length)]
+        result = bytes(self._data[self._pos : (self._pos + length)])
         self._pos += length
         return result
 
