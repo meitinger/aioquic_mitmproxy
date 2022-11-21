@@ -6,16 +6,16 @@ aioquic_mitmproxy
 .. |rtd| image:: https://readthedocs.org/projects/aioquic/badge/?version=latest
     :target: https://aioquic.readthedocs.io/
 
-.. |pypi-v| image:: https://img.shields.io/pypi/v/aioquic.svg
+.. |pypi-v| image:: https://img.shields.io/pypi/v/aioquic-mitmproxy.svg
     :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
-.. |pypi-pyversions| image:: https://img.shields.io/pypi/pyversions/aioquic.svg
+.. |pypi-pyversions| image:: https://img.shields.io/pypi/pyversions/aioquic-mitmproxy.svg
     :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
-.. |pypi-l| image:: https://img.shields.io/pypi/l/aioquic.svg
+.. |pypi-l| image:: https://img.shields.io/pypi/l/aioquic-mitmproxy.svg
     :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
-.. |tests| image:: https://github.com/aiortc/aioquic/workflows/tests/badge.svg
+.. |tests| image:: https://github.com/meitinger/aioquic_mitmproxy/workflows/tests/badge.svg
     :target: https://github.com/meitinger/aioquic_mitmproxy/actions
 
 .. |codecov| image:: https://img.shields.io/codecov/c/github/meitinger/aioquic_mitmproxy.svg
