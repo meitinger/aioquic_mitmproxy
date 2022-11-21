@@ -225,7 +225,7 @@ class AEAD:
 
 
 class HeaderProtection:
-    def __init__(self, cipher_name: bytes, key: bytes):
+    def __init__(self, cipher_name: bytes, key: bytes) -> None:
         self._is_chacha20 = cipher_name == b"chacha20"
         self._binding = Binding()
 

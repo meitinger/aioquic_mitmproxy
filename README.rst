@@ -1,5 +1,5 @@
-aioquic
-=======
+aioquic_mitmproxy
+=================
 
 |rtd| |pypi-v| |pypi-pyversions| |pypi-l| |tests| |codecov| |black|
 
@@ -7,22 +7,31 @@ aioquic
     :target: https://aioquic.readthedocs.io/
 
 .. |pypi-v| image:: https://img.shields.io/pypi/v/aioquic.svg
-    :target: https://pypi.python.org/pypi/aioquic
+    :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
 .. |pypi-pyversions| image:: https://img.shields.io/pypi/pyversions/aioquic.svg
-    :target: https://pypi.python.org/pypi/aioquic
+    :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
 .. |pypi-l| image:: https://img.shields.io/pypi/l/aioquic.svg
-    :target: https://pypi.python.org/pypi/aioquic
+    :target: https://pypi.python.org/pypi/aioquic-mitmproxy
 
 .. |tests| image:: https://github.com/aiortc/aioquic/workflows/tests/badge.svg
-    :target: https://github.com/aiortc/aioquic/actions
+    :target: https://github.com/meitinger/aioquic_mitmproxy/actions
 
-.. |codecov| image:: https://img.shields.io/codecov/c/github/aiortc/aioquic.svg
-    :target: https://codecov.io/gh/aiortc/aioquic
+.. |codecov| image:: https://img.shields.io/codecov/c/github/meitinger/aioquic_mitmproxy.svg
+    :target: https://codecov.io/gh/meitinger/aioquic_mitmproxy
 
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/python/black
+
+What is ``aioquic_mitmproxy``?
+------------------------------
+
+``aioquic_mitmproxy`` is a fork of `aioquic`_, that is specifically targeted
+towards `mitmproxy`_.
+
+It replaces all C code with Python code and uses the OpenSSL library provided
+by `cryptography`_ instead of providing its own build.
 
 What is ``aioquic``?
 --------------------
@@ -132,3 +141,5 @@ License
 .. _RFC 8446: https://datatracker.ietf.org/doc/html/rfc8446
 .. _RFC 9000: https://datatracker.ietf.org/doc/html/rfc9000
 .. _RFC 9114: https://datatracker.ietf.org/doc/html/rfc9114
+.. _aioquic: https://github.com/aiortc/aioquic
+.. _mitmproxy: https://github.com/mitmproxy/mitmproxy
