@@ -30,8 +30,11 @@ What is ``aioquic_mitmproxy``?
 ``aioquic_mitmproxy`` is a fork of `aioquic`_, that is specifically targeted
 towards `mitmproxy`_.
 
-It replaces all C code with Python code and uses the OpenSSL library provided
-by `cryptography`_ instead of providing its own build.
+If you want to use QUIC and/or HTTP/3 in your Python project, you should use
+``aioquic`` instead: https://pypi.org/project/aioquic/
+
+Any code contributions to ``aioquic`` should also be submitted directly to
+upstream: https://github.com/aiortc/aioquic
 
 What is ``aioquic``?
 --------------------
