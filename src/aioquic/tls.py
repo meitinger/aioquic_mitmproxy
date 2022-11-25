@@ -254,7 +254,9 @@ def verify_certificate(
     try:
         store_ctx.verify_certificate()
     except crypto.X509StoreContextError as exc:
-        raise AlertBadCertificate(exc.args[0][2])
+        # pyOpenSSL >= 22: the first argument is the message
+        msg = exc.args[0]
+        raise AlertBadCertificate(msg if isinstance(msg, str) else msg[2])
 
 
 class CipherSuite(IntEnum):
