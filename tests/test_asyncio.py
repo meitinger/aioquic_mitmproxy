@@ -6,13 +6,12 @@ import socket
 from unittest import TestCase, skipIf
 from unittest.mock import patch
 
-from cryptography.hazmat.primitives import serialization
-
 from aioquic.asyncio.client import connect
 from aioquic.asyncio.protocol import QuicConnectionProtocol
 from aioquic.asyncio.server import serve
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.logger import QuicLogger
+from cryptography.hazmat.primitives import serialization
 
 from .utils import (
     SERVER_CACERTFILE,
@@ -71,7 +70,7 @@ class HighLevelTest(TestCase):
         cafile=SERVER_CACERTFILE,
         configuration=None,
         request=b"ping",
-        **kwargs
+        **kwargs,
     ):
         if host is None:
             host = self.server_host
@@ -106,7 +105,7 @@ class HighLevelTest(TestCase):
             port=0,
             configuration=configuration,
             stream_handler=handle_stream,
-            **kwargs
+            **kwargs,
         )
         try:
             yield server._transport.get_extra_info("sockname")[1]
@@ -150,19 +149,25 @@ class HighLevelTest(TestCase):
     @asynctest
     async def test_connect_and_serve_with_ec_certificate(self):
         await self._test_connect_and_serve_with_certificate(
-            *generate_ec_certificate(common_name="localhost")
+            *generate_ec_certificate(
+                alternative_names=["localhost"], common_name="localhost"
+            )
         )
 
     @asynctest
     async def test_connect_and_serve_with_ed25519_certificate(self):
         await self._test_connect_and_serve_with_certificate(
-            *generate_ed25519_certificate(common_name="localhost")
+            *generate_ed25519_certificate(
+                alternative_names=["localhost"], common_name="localhost"
+            )
         )
 
     @asynctest
     async def test_connect_and_serve_with_ed448_certificate(self):
         await self._test_connect_and_serve_with_certificate(
-            *generate_ed448_certificate(common_name="localhost")
+            *generate_ed448_certificate(
+                alternative_names=["localhost"], common_name="localhost"
+            )
         )
 
     @asynctest
@@ -235,7 +240,6 @@ class HighLevelTest(TestCase):
         async with self.run_server(
             session_ticket_fetcher=store.pop, session_ticket_handler=store.add
         ) as server_port:
-
             # first request
             response = await self.run_client(
                 port=server_port, session_ticket_handler=save_ticket

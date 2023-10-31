@@ -4,10 +4,6 @@ import ssl
 from unittest import TestCase
 from unittest.mock import patch
 
-from cryptography.exceptions import UnsupportedAlgorithm
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-
 from aioquic import tls
 from aioquic.buffer import Buffer, BufferReadError
 from aioquic.quic.configuration import QuicConfiguration
@@ -39,6 +35,8 @@ from aioquic.tls import (
     push_server_hello,
     verify_certificate,
 )
+from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.hazmat.primitives import serialization
 
 from .utils import (
     SERVER_CACERTFILE,
@@ -111,7 +109,7 @@ class ContextTest(TestCase):
             cadata=cadata,
             cafile=cafile,
             is_client=True,
-            **kwargs
+            **kwargs,
         )
         client.handshake_extensions = [
             (
@@ -130,7 +128,7 @@ class ContextTest(TestCase):
             alpn_protocols=alpn_protocols,
             is_client=False,
             max_early_data=0xFFFFFFFF,
-            **kwargs
+            **kwargs,
         )
         server.certificate = configuration.certificate
         server.certificate_private_key = configuration.private_key
@@ -174,25 +172,28 @@ class ContextTest(TestCase):
         client = self.create_client()
         server = self.create_server()
 
-        # send client hello
+        # Send client hello.
         client_buf = create_buffers()
         client.handle_message(b"", client_buf)
         self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
         server_input = merge_buffers(client_buf)
         reset_buffers(client_buf)
 
-        # handle client hello
-        # send server hello, encrypted extensions, certificate, certificate verify, finished
+        # Handle client hello.
+        #
+        # send server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
         server_buf = create_buffers()
         server.handle_message(server_input, server_buf)
         self.assertEqual(server.state, State.SERVER_EXPECT_FINISHED)
         client_input = merge_buffers(server_buf)
         reset_buffers(server_buf)
 
-        # mess with certificate verify
+        # Mess with certificate verify.
         client_input = client_input[:-56] + bytes(4) + client_input[-52:]
 
-        # handle server hello, encrypted extensions, certificate, certificate verify, finished
+        # Handle server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
         with self.assertRaises(tls.AlertDecryptError):
             client.handle_message(client_input, client_buf)
 
@@ -200,25 +201,28 @@ class ContextTest(TestCase):
         client = self.create_client()
         server = self.create_server()
 
-        # send client hello
+        # Send client hello.
         client_buf = create_buffers()
         client.handle_message(b"", client_buf)
         self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
         server_input = merge_buffers(client_buf)
         reset_buffers(client_buf)
 
-        # handle client hello
-        # send server hello, encrypted extensions, certificate, certificate verify, finished
+        # Handle client hello.
+        #
+        # Send server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
         server_buf = create_buffers()
         server.handle_message(server_input, server_buf)
         self.assertEqual(server.state, State.SERVER_EXPECT_FINISHED)
         client_input = merge_buffers(server_buf)
         reset_buffers(server_buf)
 
-        # mess with finished verify data
+        # Mess with finished verify data.
         client_input = client_input[:-4] + bytes(4)
 
-        # handle server hello, encrypted extensions, certificate, certificate verify, finished
+        # Handle server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
         with self.assertRaises(tls.AlertDecryptError):
             client.handle_message(client_input, client_buf)
 
@@ -238,14 +242,14 @@ class ContextTest(TestCase):
             server.handle_message(b"\x00\x00\x00\x00", create_buffers())
 
     def _server_fail_hello(self, client, server):
-        # send client hello
+        # Send client hello.
         client_buf = create_buffers()
         client.handle_message(b"", client_buf)
         self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
         server_input = merge_buffers(client_buf)
         reset_buffers(client_buf)
 
-        # handle client hello
+        # Handle client hello.
         server_buf = create_buffers()
         server.handle_message(server_input, server_buf)
 
@@ -282,37 +286,41 @@ class ContextTest(TestCase):
         client = self.create_client()
         server = self.create_server()
 
-        # send client hello
+        # Send client hello.
         client_buf = create_buffers()
         client.handle_message(b"", client_buf)
         self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
         server_input = merge_buffers(client_buf)
         reset_buffers(client_buf)
 
-        # handle client hello
-        # send server hello, encrypted extensions, certificate, certificate verify, finished
+        # Handle client hello.
+        #
+        # Send server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
         server_buf = create_buffers()
         server.handle_message(server_input, server_buf)
         self.assertEqual(server.state, State.SERVER_EXPECT_FINISHED)
         client_input = merge_buffers(server_buf)
         reset_buffers(server_buf)
 
-        # handle server hello, encrypted extensions, certificate, certificate verify, finished
-        # send finished
+        # Handle server hello, encrypted extensions, certificate, certificate verify,
+        # finished.
+        #
+        # Send finished.
         client.handle_message(client_input, client_buf)
         self.assertEqual(client.state, State.CLIENT_POST_HANDSHAKE)
         server_input = merge_buffers(client_buf)
         reset_buffers(client_buf)
 
-        # mess with finished verify data
+        # Mess with finished verify data.
         server_input = server_input[:-4] + bytes(4)
 
-        # handle finished
+        # Handle finished.
         with self.assertRaises(tls.AlertDecryptError):
             server.handle_message(server_input, server_buf)
 
     def _handshake(self, client, server):
-        # send client hello
+        # Send client hello.
         client_buf = create_buffers()
         client.handle_message(b"", client_buf)
         self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
@@ -321,8 +329,10 @@ class ContextTest(TestCase):
         self.assertLessEqual(len(server_input), 358)
         reset_buffers(client_buf)
 
-        # handle client hello
-        # send server hello, encrypted extensions, certificate, certificate verify, finished, (session ticket)
+        # Handle client hello.
+        #
+        # Send server hello, encrypted extensions, certificate, certificate verify,
+        # finished, (session ticket).
         server_buf = create_buffers()
         server.handle_message(server_input, server_buf)
         self.assertEqual(server.state, State.SERVER_EXPECT_FINISHED)
@@ -332,15 +342,17 @@ class ContextTest(TestCase):
 
         reset_buffers(server_buf)
 
-        # handle server hello, encrypted extensions, certificate, certificate verify, finished, (session ticket)
-        # send finished
+        # Handle server hello, encrypted extensions, certificate, certificate verify,
+        # finished, (session ticket).
+        #
+        # Send finished.
         client.handle_message(client_input, client_buf)
         self.assertEqual(client.state, State.CLIENT_POST_HANDSHAKE)
         server_input = merge_buffers(client_buf)
         self.assertEqual(len(server_input), 52)
         reset_buffers(client_buf)
 
-        # handle finished
+        # Handle finished.
         server.handle_message(server_input, server_buf)
         self.assertEqual(server.state, State.SERVER_POST_HANDSHAKE)
         client_input = merge_buffers(server_buf)
@@ -509,7 +521,7 @@ class ContextTest(TestCase):
             server = self.create_server()
             server.get_session_ticket_cb = server_get_ticket
 
-            # send client hello with pre_shared_key
+            # Send client hello with pre_shared_key.
             client_buf = create_buffers()
             client.handle_message(b"", client_buf)
             self.assertEqual(client.state, State.CLIENT_EXPECT_SERVER_HELLO)
@@ -518,8 +530,9 @@ class ContextTest(TestCase):
             self.assertLessEqual(len(server_input), 483)
             reset_buffers(client_buf)
 
-            # handle client hello
-            # send server hello, encrypted extensions, finished
+            # Handle client hello.
+            #
+            # Send server hello, encrypted extensions, finished.
             server_buf = create_buffers()
             server.handle_message(server_input, server_buf)
             self.assertEqual(server.state, State.SERVER_EXPECT_FINISHED)
@@ -527,16 +540,19 @@ class ContextTest(TestCase):
             self.assertEqual(len(client_input), 275)
             reset_buffers(server_buf)
 
-            # handle server hello, encrypted extensions, certificate, certificate verify, finished
-            # send finished
+            # Handle server hello, encrypted extensions, certificate,
+            # certificate verify, finished.
+            #
+            # Send finished.
             client.handle_message(client_input, client_buf)
             self.assertEqual(client.state, State.CLIENT_POST_HANDSHAKE)
             server_input = merge_buffers(client_buf)
             self.assertEqual(len(server_input), 52)
             reset_buffers(client_buf)
 
-            # handle finished
-            # send new_session_ticket
+            # Handle finished.
+            #
+            # Send new_session_ticket.
             server.handle_message(server_input, server_buf)
             self.assertEqual(server.state, State.SERVER_POST_HANDSHAKE)
             client_input = merge_buffers(server_buf)
@@ -1278,7 +1294,7 @@ class VerifyCertificateTest(TestCase):
 
     def test_verify_certificate_chain_self_signed(self):
         certificate, _ = generate_ec_certificate(
-            common_name="localhost", curve=ec.SECP256R1
+            alternative_names=["localhost"], common_name="localhost"
         )
 
         with patch("aioquic.tls.utcnow") as mock_utcnow:
@@ -1304,7 +1320,7 @@ class VerifyCertificateTest(TestCase):
 
     def test_verify_dates(self):
         certificate, _ = generate_ec_certificate(
-            common_name="example.com", curve=ec.SECP256R1
+            alternative_names=["example.com"], common_name="example.com"
         )
         cadata = certificate.public_bytes(serialization.Encoding.PEM)
 
@@ -1343,45 +1359,26 @@ class VerifyCertificateTest(TestCase):
                 )
             self.assertEqual(str(cm.exception), "Certificate is no longer valid")
 
-    def test_verify_subject(self):
-        certificate, _ = generate_ec_certificate(
-            common_name="example.com", curve=ec.SECP256R1
-        )
+    def test_verify_subject_no_subjaltname(self):
+        certificate, _ = generate_ec_certificate(common_name="example.com")
         cadata = certificate.public_bytes(serialization.Encoding.PEM)
 
         with patch("aioquic.tls.utcnow") as mock_utcnow:
             mock_utcnow.return_value = certificate.not_valid_before
 
-            # valid
-            verify_certificate(
-                cadata=cadata, certificate=certificate, server_name="example.com"
-            )
-
-            # invalid
+            # certificates with no SubjectAltName are rejected
             with self.assertRaises(tls.AlertBadCertificate) as cm:
                 verify_certificate(
-                    cadata=cadata,
-                    certificate=certificate,
-                    server_name="test.example.com",
+                    cadata=cadata, certificate=certificate, server_name="example.com"
                 )
             self.assertEqual(
-                str(cm.exception),
-                "hostname 'test.example.com' doesn't match 'example.com'",
-            )
-
-            with self.assertRaises(tls.AlertBadCertificate) as cm:
-                verify_certificate(
-                    cadata=cadata, certificate=certificate, server_name="acme.com"
-                )
-            self.assertEqual(
-                str(cm.exception), "hostname 'acme.com' doesn't match 'example.com'"
+                str(cm.exception), "Certificate does not match hostname 'example.com'"
             )
 
     def test_verify_subject_with_subjaltname(self):
         certificate, _ = generate_ec_certificate(
             alternative_names=["*.example.com", "example.com"],
             common_name="example.com",
-            curve=ec.SECP256R1,
         )
         cadata = certificate.public_bytes(serialization.Encoding.PEM)
 
@@ -1402,6 +1399,5 @@ class VerifyCertificateTest(TestCase):
                     cadata=cadata, certificate=certificate, server_name="acme.com"
                 )
             self.assertEqual(
-                str(cm.exception),
-                "hostname 'acme.com' doesn't match either of '*.example.com', 'example.com'",
+                str(cm.exception), "Certificate does not match hostname 'acme.com'"
             )

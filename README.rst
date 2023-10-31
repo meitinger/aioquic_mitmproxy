@@ -75,7 +75,7 @@ Features
 Requirements
 ------------
 
-``aioquic`` requires Python 3.7 or better.
+``aioquic`` requires Python 3.8 or better.
 
 Running the examples
 --------------------

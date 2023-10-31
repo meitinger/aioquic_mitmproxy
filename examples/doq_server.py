@@ -4,13 +4,12 @@ import logging
 import struct
 from typing import Dict, Optional
 
-from dnslib.dns import DNSRecord
-
 from aioquic.asyncio import QuicConnectionProtocol, serve
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.events import QuicEvent, StreamDataReceived
 from aioquic.quic.logger import QuicFileLogger
 from aioquic.tls import SessionTicket
+from dnslib.dns import DNSRecord
 
 
 class DnsServerProtocol(QuicConnectionProtocol):
@@ -51,19 +50,18 @@ async def main(
     retry: bool,
 ) -> None:
     await serve(
-        args.host,
-        args.port,
+        host,
+        port,
         configuration=configuration,
         create_protocol=DnsServerProtocol,
         session_ticket_fetcher=session_ticket_store.pop,
         session_ticket_handler=session_ticket_store.add,
-        retry=args.retry,
+        retry=retry,
     )
     await asyncio.Future()
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="DNS over QUIC server")
     parser.add_argument(
         "--host",
@@ -74,8 +72,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port",
         type=int,
-        default=4784,
-        help="listen on the specified port (defaults to 4784)",
+        default=853,
+        help="listen on the specified port (defaults to 853)",
     )
     parser.add_argument(
         "-k",
@@ -125,7 +123,7 @@ if __name__ == "__main__":
         quic_logger = None
 
     configuration = QuicConfiguration(
-        alpn_protocols=["doq-i03"],
+        alpn_protocols=["doq"],
         is_client=False,
         quic_logger=quic_logger,
     )
