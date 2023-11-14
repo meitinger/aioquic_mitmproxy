@@ -16,7 +16,7 @@ from ..buffer import (
     size_uint_var,
 )
 from . import events
-from .configuration import QuicConfiguration
+from .configuration import SMALLEST_MAX_DATAGRAM_SIZE, QuicConfiguration
 from .crypto import CryptoError, CryptoPair, KeyUnavailableError
 from .logger import QuicLoggerTrace
 from .packet import (
@@ -46,7 +46,6 @@ from .packet import (
     push_quic_transport_parameters,
 )
 from .packet_builder import (
-    PACKET_MAX_SIZE,
     QuicDeliveryState,
     QuicPacketBuilder,
     QuicPacketBuilderStop,
@@ -241,6 +240,10 @@ class QuicConnection:
         session_ticket_fetcher: Optional[tls.SessionTicketFetcher] = None,
         session_ticket_handler: Optional[tls.SessionTicketHandler] = None,
     ) -> None:
+        assert configuration.max_datagram_size >= SMALLEST_MAX_DATAGRAM_SIZE, (
+            "The smallest allowed maximum datagram size is "
+            f"{SMALLEST_MAX_DATAGRAM_SIZE} bytes"
+        )
         if configuration.is_client:
             assert (
                 original_destination_connection_id is None
@@ -303,7 +306,10 @@ class QuicConnection:
         self._local_max_streams_uni = Limit(
             frame_type=QuicFrameType.MAX_STREAMS_UNI, name="max_streams_uni", value=128
         )
+        self._local_next_stream_id_bidi = 0 if self._is_client else 1
+        self._local_next_stream_id_uni = 2 if self._is_client else 3
         self._loss_at: Optional[float] = None
+        self._max_datagram_size = configuration.max_datagram_size
         self._network_paths: List[QuicNetworkPath] = []
         self._pacing_at: Optional[float] = None
         self._packet_number = 0
@@ -360,6 +366,7 @@ class QuicConnection:
         # loss recovery
         self._loss = QuicPacketRecovery(
             initial_rtt=configuration.initial_rtt,
+            max_datagram_size=self._max_datagram_size,
             peer_completed_address_validation=not self._is_client,
             quic_logger=self._quic_logger,
             send_probe=self._send_probe,
@@ -501,6 +508,7 @@ class QuicConnection:
         builder = QuicPacketBuilder(
             host_cid=self.host_cid,
             is_client=self._is_client,
+            max_datagram_size=self._max_datagram_size,
             packet_number=self._packet_number,
             peer_cid=self._peer_cid.cid,
             peer_token=self._peer_token,
@@ -539,8 +547,11 @@ class QuicConnection:
             builder.max_flight_bytes = (
                 self._loss.congestion_window - self._loss.bytes_in_flight
             )
-            if self._probe_pending and builder.max_flight_bytes < PACKET_MAX_SIZE:
-                builder.max_flight_bytes = PACKET_MAX_SIZE
+            if (
+                self._probe_pending
+                and builder.max_flight_bytes < self._max_datagram_size
+            ):
+                builder.max_flight_bytes = self._max_datagram_size
 
             # limit data on un-validated network paths
             if not network_path.is_validated:
@@ -623,10 +634,10 @@ class QuicConnection:
         """
         Return the stream ID for the next stream created by this endpoint.
         """
-        stream_id = (int(is_unidirectional) << 1) | int(not self._is_client)
-        while stream_id in self._streams or stream_id in self._streams_finished:
-            stream_id += 4
-        return stream_id
+        if is_unidirectional:
+            return self._local_next_stream_id_uni
+        else:
+            return self._local_next_stream_id_bidi
 
     def get_timer(self) -> Optional[float]:
         """
@@ -1291,12 +1302,17 @@ class QuicConnection:
                 streams_blocked = self._streams_blocked_bidi
 
             # create stream
+            is_unidirectional = stream_is_unidirectional(stream_id)
             stream = self._streams[stream_id] = QuicStream(
                 stream_id=stream_id,
                 max_stream_data_local=max_stream_data_local,
                 max_stream_data_remote=max_stream_data_remote,
-                readable=not stream_is_unidirectional(stream_id),
+                readable=not is_unidirectional,
             )
+            if is_unidirectional:
+                self._local_next_stream_id_uni = stream_id + 4
+            else:
+                self._local_next_stream_id_bidi = stream_id + 4
 
             # mark stream as blocked if needed
             if stream_id // 4 >= max_streams:
@@ -2063,6 +2079,10 @@ class QuicConnection:
         stream = self._get_or_create_stream(frame_type, stream_id)
         stream.sender.reset(error_code=QuicErrorCode.NO_ERROR)
 
+        self._events.append(
+            events.StopSendingReceived(error_code=error_code, stream_id=stream_id)
+        )
+
     def _handle_stream_frame(
         self, context: QuicReceiveContext, frame_type: int, buf: Buffer
     ) -> None:
@@ -2457,14 +2477,16 @@ class QuicConnection:
                     frame_type=QuicFrameType.CRYPTO,
                     reason_phrase="max_ack_delay must be < 2^14",
                 )
-            if (
-                quic_transport_parameters.max_udp_payload_size is not None
-                and quic_transport_parameters.max_udp_payload_size < 1200
+            if quic_transport_parameters.max_udp_payload_size is not None and (
+                quic_transport_parameters.max_udp_payload_size
+                < SMALLEST_MAX_DATAGRAM_SIZE
             ):
                 raise QuicConnectionError(
                     error_code=QuicErrorCode.TRANSPORT_PARAMETER_ERROR,
                     frame_type=QuicFrameType.CRYPTO,
-                    reason_phrase="max_udp_payload_size must be >= 1200",
+                    reason_phrase=(
+                        f"max_udp_payload_size must be >= {SMALLEST_MAX_DATAGRAM_SIZE}"
+                    ),
                 )
 
         # store remote parameters
@@ -2521,7 +2543,7 @@ class QuicConnection:
             initial_source_connection_id=self._local_initial_source_connection_id,
             max_ack_delay=25,
             max_datagram_frame_size=self._configuration.max_datagram_frame_size,
-            quantum_readiness=b"Q" * 1200
+            quantum_readiness=b"Q" * SMALLEST_MAX_DATAGRAM_SIZE
             if self._configuration.quantum_readiness_test
             else None,
             stateless_reset_token=self._host_cids[0].stateless_reset_token,
@@ -2544,7 +2566,7 @@ class QuicConnection:
                 ),
             )
 
-        buf = Buffer(capacity=3 * PACKET_MAX_SIZE)
+        buf = Buffer(capacity=3 * self._max_datagram_size)
         push_quic_transport_parameters(buf, quic_transport_parameters)
         return buf.data
 
