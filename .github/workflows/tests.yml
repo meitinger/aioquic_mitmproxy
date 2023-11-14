@@ -41,7 +41,7 @@ jobs:
         with:
           check_filenames: true
           check_hidden: false
-          ignore_words_list: quicly,manuel
+          ignore_words_list: quicly
 
   test:
     runs-on: ${{ matrix.os }}
@@ -62,7 +62,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Disable firewall
         if: matrix.os == 'macos-latest'
-        run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+        run: |
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
       - name: Run tests
         run: |
           python -m pip install -U pip setuptools wheel

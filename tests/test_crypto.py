@@ -367,20 +367,20 @@ class CryptoTest(TestCase):
         # invalid cipher
         with self.assertRaises(CryptoError) as cm:
             self.create_aead(cipher_name=b"tango9000")
-        self.assertEquals(str(cm.exception), "Invalid cipher name: tango9000")
+        self.assertEqual(str(cm.exception), "Invalid cipher name: tango9000")
 
         # invalid key length
         with self.assertRaises(CryptoError) as cm:
             self.create_aead(key=bytes(33))
-        self.assertEquals(str(cm.exception), "Invalid key length")
+        self.assertEqual(str(cm.exception), "Invalid key length")
 
         # invalid iv length
         with self.assertRaises(CryptoError) as cm:
             self.create_aead(iv=bytes(11))
-        self.assertEquals(str(cm.exception), "Invalid iv length")
+        self.assertEqual(str(cm.exception), "Invalid iv length")
         with self.assertRaises(CryptoError) as cm:
             self.create_aead(iv=bytes(13))
-        self.assertEquals(str(cm.exception), "Invalid iv length")
+        self.assertEqual(str(cm.exception), "Invalid iv length")
 
     def test_aead_data_length_validation(self):
         aead = self.create_aead()
@@ -388,38 +388,38 @@ class CryptoTest(TestCase):
         zero_nonce = bytes(12)
 
         # too large for encrypt, early abort
-        self.assertEquals(bytes(aead._nonce), zero_nonce)
+        self.assertEqual(bytes(aead._nonce), zero_nonce)
         with self.assertRaises(CryptoError) as cm:
             aead.encrypt(bytes(1501), associated_data=b"", packet_number=0)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
-        self.assertEquals(bytes(aead._nonce), zero_nonce)
+        self.assertEqual(str(cm.exception), "Invalid payload length")
+        self.assertEqual(bytes(aead._nonce), zero_nonce)
 
         # too large for encrypt, late tag check
         with self.assertRaises(CryptoError) as cm:
             aead.encrypt(bytes(1500), associated_data=b"", packet_number=0)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
-        self.assertEquals(bytes(aead._nonce), iv)
+        self.assertEqual(str(cm.exception), "Invalid payload length")
+        self.assertEqual(bytes(aead._nonce), iv)
 
         # too small for decrypt
         with self.assertRaises(CryptoError) as cm:
             aead.decrypt(bytes(11), associated_data=b"", packet_number=0)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
+        self.assertEqual(str(cm.exception), "Invalid payload length")
 
         # too large for decrypt
         with self.assertRaises(CryptoError) as cm:
             aead.decrypt(bytes(1501), associated_data=b"", packet_number=0)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
+        self.assertEqual(str(cm.exception), "Invalid payload length")
 
     def test_hp_init_args_validation(self):
         # invalid cipher
         with self.assertRaises(CryptoError) as cm:
             self.create_hp(cipher_name=b"tango9000")
-        self.assertEquals(str(cm.exception), "Invalid cipher name: tango9000")
+        self.assertEqual(str(cm.exception), "Invalid cipher name: tango9000")
 
         # invalid key length
         with self.assertRaises(CryptoError) as cm:
             self.create_hp(key=bytes(33))
-        self.assertEquals(str(cm.exception), "Invalid key length")
+        self.assertEqual(str(cm.exception), "Invalid key length")
 
     def test_hp_data_length_validation(self):
         hp = self.create_hp()
@@ -427,17 +427,17 @@ class CryptoTest(TestCase):
         # too large for apply
         with self.assertRaises(CryptoError) as cm:
             hp.apply(plain_header=bytes(501), protected_payload=bytes(1000))
-        self.assertEquals(str(cm.exception), "Invalid payload length")
+        self.assertEqual(str(cm.exception), "Invalid payload length")
 
         # packet number offset too large
         with self.assertRaises(CryptoError) as cm:
             hp.remove(packet=bytes(500), encrypted_offset=481)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
+        self.assertEqual(str(cm.exception), "Invalid payload length")
 
         # not enough data
         with self.assertRaises(CryptoError) as cm:
             hp.remove(packet=bytes(19), encrypted_offset=0)
-        self.assertEquals(str(cm.exception), "Invalid payload length")
+        self.assertEqual(str(cm.exception), "Invalid payload length")
 
     def test_handle_openssl_failure(self):
         # ensure errors are cleared
