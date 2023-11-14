@@ -41,7 +41,7 @@ jobs:
         with:
           check_filenames: true
           check_hidden: false
-          ignore_words_list: quicly,Manuel
+          ignore_words_list: quicly,manuel
 
   test:
     runs-on: ${{ matrix.os }}
